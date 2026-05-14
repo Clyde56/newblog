@@ -1,0 +1,2 @@
+# newblog
+creat by AI
