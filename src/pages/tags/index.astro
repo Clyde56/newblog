@@ -1,0 +1,31 @@
+---
+// 标签总览页：列出所有标签及对应文章数
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import { getCollection } from 'astro:content'
+
+const posts = await getCollection('blog')
+const tagCount = new Map()
+for (const p of posts) {
+  for (const t of p.data.tags) {
+    tagCount.set(t, (tagCount.get(t) || 0) + 1)
+  }
+}
+const sortedTags = [...tagCount.entries()].sort((a, b) => b[1] - a[1])
+---
+
+<BaseLayout title="标签 — My Blog" description="所有标签">
+  <div class="h-1 w-16 gradient-bg rounded-full mx-auto mb-8"></div>
+  <h1 class="text-2xl sm:text-3xl font-bold text-center mb-8">所有标签</h1>
+
+  <div class="flex flex-wrap justify-center gap-4 max-w-lg mx-auto">
+    {sortedTags.map(([tag, count]) => (
+      <a
+        href={`/tags/${tag}`}
+        class="glass px-5 py-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 text-center min-w-[100px]"
+      >
+        <span class="gradient-text font-semibold text-base"># {tag}</span>
+        <span class="block text-xs text-gray-400 mt-1">{count} 篇</span>
+      </a>
+    ))}
+  </div>
+</BaseLayout>

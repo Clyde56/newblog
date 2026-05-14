@@ -1,0 +1,37 @@
+---
+// 标签筛选页：按标签列出所有匹配文章
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import { getCollection } from 'astro:content'
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog')
+  const tags = [...new Set(posts.flatMap((p) => p.data.tags))]
+  return tags.map((tag) => ({
+    params: { tag },
+    props: { tag, posts: posts.filter((p) => p.data.tags.includes(tag)) },
+  }))
+}
+
+const { tag, posts } = Astro.props
+posts.sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime())
+---
+
+<BaseLayout title={`#${tag} — My Blog`} description={`标签 ${tag} 下的文章`}>
+  <div class="h-1 w-16 gradient-bg rounded-full mx-auto mb-8"></div>
+  <h1 class="text-2xl sm:text-3xl font-bold text-center mb-2"># {tag}</h1>
+  <p class="text-gray-500 text-center mb-10 text-sm">共 {posts.length} 篇</p>
+
+  <div class="grid gap-6 sm:grid-cols-2">
+    {posts.map((post) => (
+      <a href={`/${post.slug}`} class="glass p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group block">
+        <h2 class="text-lg font-semibold text-gray-900 group-hover:text-primary-600 transition line-clamp-2">
+          {post.data.title}
+        </h2>
+        <p class="text-sm text-gray-500 mt-1.5 line-clamp-2">{post.data.description}</p>
+        <time class="text-xs text-gray-400 mt-3 block">
+          {post.data.pubDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
+        </time>
+      </a>
+    ))}
+  </div>
+</BaseLayout>

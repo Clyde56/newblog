@@ -1,0 +1,44 @@
+---
+// 顶部导航：桌面端平铺链接，移动端汉堡菜单
+---
+
+<header class="sticky top-0 z-50 w-full glass-strong border-b border-white/20">
+  <nav class="max-w-4xl mx-auto flex items-center justify-between h-16 px-4 sm:px-6">
+    <!-- Logo / 站点名 -->
+    <a href="/" class="gradient-text text-xl font-bold tracking-tight">
+       My Blog
+    </a>
+
+    <!-- 桌面端导航链接 -->
+    <ul class="hidden sm:flex items-center gap-8 text-sm font-medium text-gray-600">
+      <li><a href="/" class="hover:text-primary-500 transition">首页</a></li>
+      <li><a href="/tags" class="hover:text-primary-500 transition">标签</a></li>
+      <li><a href="/rss.xml" class="hover:text-primary-500 transition" target="_blank">RSS</a></li>
+    </ul>
+
+    <!-- 汉堡菜单按钮（移动端） -->
+    <button id="menu-btn" class="sm:hidden p-2 text-gray-600 hover:text-gray-900" aria-label="菜单">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+  </nav>
+
+  <!-- 移动端下拉菜单 -->
+  <div id="mobile-menu" class="sm:hidden hidden glass-strong border-t border-white/10">
+    <ul class="flex flex-col gap-2 px-4 py-4 text-sm font-medium text-gray-600">
+      <li><a href="/" class="block py-2 hover:text-primary-500 transition">首页</a></li>
+      <li><a href="/tags" class="block py-2 hover:text-primary-500 transition">标签</a></li>
+      <li><a href="/rss.xml" class="block py-2 hover:text-primary-500 transition" target="_blank">RSS</a></li>
+    </ul>
+  </div>
+</header>
+
+<script>
+  // 移动端汉堡菜单切换
+  const btn = document.getElementById('menu-btn')
+  const menu = document.getElementById('mobile-menu')
+  if (btn && menu) {
+    btn.addEventListener('click', () => menu.classList.toggle('hidden'))
+  }
+</script>

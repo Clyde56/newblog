@@ -1,0 +1,53 @@
+---
+// 文章详情页：动态路由 [slug].astro，渲染 Markdown 内容
+import BaseLayout from '../layouts/BaseLayout.astro'
+import { getCollection } from 'astro:content'
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog')
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }))
+}
+
+const { post } = Astro.props
+const { Content } = await post.render()
+---
+
+<BaseLayout title={`${post.data.title} — My Blog`} description={post.data.description}>
+  <article class="max-w-2xl mx-auto">
+    <!-- 返回链接 -->
+    <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-primary-500 mb-6 transition">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+      返回首页
+    </a>
+
+    <!-- 文章卡片 -->
+    <div class="glass p-6 sm:p-8">
+      <!-- 标签 -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        {post.data.tags.map((tag) => (
+          <a href={`/tags/${tag}`} class="text-xs font-medium text-primary-500 bg-primary-50 px-2.5 py-0.5 rounded-full hover:bg-primary-100 transition">
+            #{tag}
+          </a>
+        ))}
+      </div>
+
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{post.data.title}</h1>
+      <time class="text-sm text-gray-400 block mb-6">
+        {post.data.pubDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
+      </time>
+
+      <!-- 封面图 -->
+      {post.data.image && (
+        <img src={post.data.image} alt={post.data.title} class="w-full h-48 sm:h-64 object-cover rounded-xl mb-6" />
+      )}
+
+      <!-- Markdown 正文（prose 类提供排版样式） -->
+      <div class="prose prose-gray max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-code:text-primary-600 prose-a:text-primary-500">
+        <Content />
+      </div>
+    </div>
+  </article>
+</BaseLayout>
