@@ -44,10 +44,51 @@ const { Content } = await post.render()
         <img src={post.data.image} alt={post.data.title} class="w-full h-48 sm:h-64 object-cover rounded-xl mb-6" />
       )}
 
-      <!-- Markdown 正文（prose 类提供排版样式） -->
+      <!-- Markdown 正文 -->
       <div class="prose prose-gray max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-code:text-primary-600 prose-a:text-primary-500">
         <Content />
       </div>
     </div>
+
+    <!-- 评论区 -->
+    <div class="glass p-6 sm:p-8 mt-8">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">💬 评论</h2>
+      <div id="comments">
+        <p class="text-sm text-gray-400 text-center py-4">
+          请在管理面板中配置 Giscus 以启用评论
+        </p>
+      </div>
+    </div>
   </article>
 </BaseLayout>
+
+<script>
+  // 从 localStorage 读取 Giscus 配置并动态加载评论
+  try {
+    const config = JSON.parse(localStorage.getItem('giscus_config') || '{}')
+    if (config.repo && config.repoId && config.category && config.categoryId) {
+      const container = document.getElementById('comments')
+      if (container) {
+        container.innerHTML = ''
+        const script = document.createElement('script')
+        script.src = 'https://giscus.app/client.js'
+        script.setAttribute('data-repo', config.repo)
+        script.setAttribute('data-repo-id', config.repoId)
+        script.setAttribute('data-category', config.category)
+        script.setAttribute('data-category-id', config.categoryId)
+        script.setAttribute('data-mapping', 'pathname')
+        script.setAttribute('data-strict', '0')
+        script.setAttribute('data-reactions-enabled', '1')
+        script.setAttribute('data-emit-metadata', '0')
+        script.setAttribute('data-input-position', 'bottom')
+        script.setAttribute('data-theme', 'light')
+        script.setAttribute('data-lang', 'zh-CN')
+        script.setAttribute('crossorigin', 'anonymous')
+        script.async = true
+        container.appendChild(script)
+      }
+    }
+  } catch (e) {
+    console.warn('Giscus 未配置:', e.message)
+  }
+</script>

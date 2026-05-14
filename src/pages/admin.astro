@@ -1,6 +1,6 @@
 ---
-// 管理面板：本地 Markdown 编辑器 + 图片上传（纯客户端）
-// 功能：新建/编辑/预览文章 → 导出 .md 文件；上传图片 → 复制路径
+// 管理面板：Markdown 编辑器 + GitHub 直接发布 + 评论系统配置
+// 所有配置保存在浏览器 localStorage 中，无需服务端
 ---
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -14,50 +14,64 @@
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; color: #1e293b; padding: 24px; }
       .container { max-width: 1100px; margin: 0 auto; }
-      h1 { font-size: 1.5rem; margin-bottom: 20px; display: flex; align-items: center; gap: 0.75rem; }
+      h1 { font-size: 1.5rem; margin-bottom: 20px; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
       .card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); margin-bottom: 20px; border: 1px solid #e2e8f0; }
       label { font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 6px; color: #475569; }
-      input, textarea, select { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.9rem; font-family: inherit; outline: none; transition: border 0.15s; }
+      input, textarea { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.9rem; font-family: inherit; outline: none; transition: border 0.15s; }
       input:focus, textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.12); }
       textarea { resize: vertical; min-height: 200px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; }
       .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-      .btn { padding: 8px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+      .btn { padding: 8px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
       .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
       .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+      .btn-success { background: #10b981; color: #fff; }
+      .btn-success:hover { opacity: 0.9; transform: translateY(-1px); }
       .btn-outline { background: #fff; border: 1px solid #e2e8f0; color: #475569; }
       .btn-outline:hover { background: #f8fafc; border-color: #cbd5e1; }
+      .btn-danger { background: #ef4444; color: #fff; }
+      .btn-danger:hover { opacity: 0.9; }
       .btn-sm { padding: 4px 12px; font-size: 0.8rem; }
       .flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
       .mt-3 { margin-top: 12px; }
       .mb-3 { margin-bottom: 12px; }
-      .text-xs { font-size: 0.75rem; color: #94a3b8; }
-      .tag { display: inline-block; background: #eef2ff; color: #667eea; padding: 2px 10px; border-radius: 100px; font-size: 0.75rem; }
-      .preview { min-height: 120px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fcfcfd; font-size: 0.9rem; line-height: 1.7; white-space: pre-wrap; }
-      .draft-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
-      .draft-item:last-child { border: none; }
+      .text-xs { font-size: 0.75rem; color: #94a3b8; line-height: 1.5; }
+      .text-sm { font-size: 0.8rem; }
       .badge { background: #f1f5f9; border-radius: 6px; padding: 2px 8px; font-size: 0.7rem; color: #64748b; }
+      .badge-green { background: #d1fae5; color: #059669; }
+      .preview { min-height: 120px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fcfcfd; font-size: 0.9rem; line-height: 1.7; white-space: pre-wrap; }
+      .draft-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+      .draft-item:last-child { border: none; }
+      .section-title { font-size: 0.9rem; font-weight: 600; color: #1e293b; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+      .config-hint { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; font-size: 0.78rem; color: #92400e; line-height: 1.6; margin-top: 10px; }
+      .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 12px; font-size: 0.85rem; font-weight: 500; color: #fff; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+      .toast.show { opacity: 1; }
+      .toast.success { background: #10b981; }
+      .toast.error { background: #ef4444; }
+      .divider { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
       @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body>
+    <div id="toast" class="toast"></div>
     <div class="container">
       <h1>
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         管理面板
-        <span class="badge">仅本地访问</span>
+        <span class="badge">仅本地</span>
+        <span id="publishStatus" class="badge badge-green" style="display:none">已连接 GitHub</span>
       </h1>
 
+      <!-- 主编辑区 -->
       <div class="row">
-        <!-- 左侧：编辑器 -->
         <div class="card">
           <div class="mb-3">
-            <label>标题</label>
-            <input id="title" placeholder="文章标题" />
+            <label>文章标题</label>
+            <input id="title" placeholder="输入文章标题" />
           </div>
           <div class="row mb-3">
             <div>
               <label>标签（逗号分隔）</label>
-              <input id="tags" placeholder="随笔, 技术" />
+              <input id="tags" placeholder="随笔, 技术, 生活" />
             </div>
             <div>
               <label>封面图路径</label>
@@ -65,26 +79,27 @@
             </div>
           </div>
           <div class="mb-3">
-            <label>正文（Markdown）</label>
+            <div class="flex" style="justify-content:space-between">
+              <label>正文（Markdown）</label>
+              <span id="wordCount" class="text-xs"></span>
+            </div>
             <textarea id="content" placeholder="在此编写 Markdown 内容…"></textarea>
           </div>
-          <div class="flex">
+          <div class="flex" style="gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-primary" onclick="saveDraft()">💾 保存草稿</button>
+            <button class="btn btn-success" onclick="publishToGitHub()">🚀 发布到 GitHub</button>
             <button class="btn btn-outline" onclick="exportMd()">📥 导出 .md</button>
             <button class="btn btn-outline" onclick="clearForm()">🗑️ 清空</button>
           </div>
-          <p class="text-xs mt-3">草稿保存在浏览器本地存储中</p>
+          <p class="text-xs mt-3">草稿保存在浏览器本地存储中。发布前请先在下方配置 GitHub 信息。</p>
         </div>
 
-        <!-- 右侧：预览 + 草稿管理 -->
         <div>
-          <!-- Markdown 预览 -->
           <div class="card">
             <label>📖 预览</label>
-            <div id="preview" class="preview">在左侧编写内容，点击预览或切换到此处查看</div>
+            <div id="preview" class="preview">在左侧编写内容，此处实时预览 Markdown 原文</div>
           </div>
 
-          <!-- 图片上传 -->
           <div class="card">
             <label>🖼️ 上传图片</label>
             <input type="file" id="imageUpload" accept="image/*" onchange="handleImage(event)" />
@@ -92,10 +107,9 @@
               <img id="previewImg" style="max-width:160px; border-radius:8px; border:1px solid #e2e8f0" />
               <button class="btn btn-outline btn-sm" onclick="copyImagePath()" style="align-self:center">📋 复制路径</button>
             </div>
-            <p class="text-xs mt-2">将图片保存到 <code>public/images/</code> 目录，路径为 <code>/images/文件名</code></p>
+            <p class="text-xs mt-2">将图片保存到 <code>public/images/</code>，路径为 <code>/images/文件名</code></p>
           </div>
 
-          <!-- 草稿列表 -->
           <div class="card">
             <div class="flex" style="justify-content:space-between">
               <label>📂 草稿列表</label>
@@ -105,25 +119,120 @@
           </div>
         </div>
       </div>
+
+      <!-- GitHub 配置 -->
+      <div class="card">
+        <div class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          GitHub 配置
+        </div>
+        <div class="row">
+          <div>
+            <label>Personal Access Token</label>
+            <input id="githubToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+            <p class="text-xs mt-1">需 <code>repo</code> 权限，在 <a href="https://github.com/settings/tokens" target="_blank" style="color:#667eea">GitHub Tokens</a> 创建</p>
+          </div>
+          <div class="row">
+            <div>
+              <label>仓库 Owner</label>
+              <input id="githubOwner" placeholder="你的 GitHub 用户名" />
+            </div>
+            <div>
+              <label>仓库名</label>
+              <input id="githubRepo" placeholder="my-blog" />
+            </div>
+          </div>
+        </div>
+        <div class="flex mt-3">
+          <button class="btn btn-outline btn-sm" onclick="saveGitHubConfig()">💾 保存配置</button>
+          <button class="btn btn-outline btn-sm" onclick="testGitHubConnection()">🔗 测试连接</button>
+        </div>
+        <div id="githubStatus" class="text-xs mt-2"></div>
+      </div>
+
+      <!-- Giscus 评论配置 -->
+      <div class="card">
+        <div class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          评论系统配置（Giscus）
+        </div>
+        <div class="row">
+          <div>
+            <label>Repo（owner/repo）</label>
+            <input id="giscusRepo" placeholder="你的用户名/my-blog" />
+          </div>
+          <div>
+            <label>Repo ID</label>
+            <input id="giscusRepoId" placeholder="R_kgDOxxxxxx" />
+          </div>
+        </div>
+        <div class="row mt-3">
+          <div>
+            <label>Category</label>
+            <input id="giscusCategory" placeholder="Announcements" />
+          </div>
+          <div>
+            <label>Category ID</label>
+            <input id="giscusCategoryId" placeholder="DIC_kwDOxxxxxx" />
+          </div>
+        </div>
+        <div class="flex mt-3">
+          <button class="btn btn-outline btn-sm" onclick="saveGiscusConfig()">💾 保存配置</button>
+        </div>
+        <div class="config-hint">
+          <strong>💡 如何获取这些值？</strong><br />
+          1. 在 GitHub 仓库中启用 Discussions（Settings → Features → Discussions）<br />
+          2. 安装 <a href="https://github.com/apps/giscus" target="_blank" style="color:#667eea;text-decoration:underline">Giscus 应用</a> 到你的仓库<br />
+          3. 访问 <a href="https://giscus.app" target="_blank" style="color:#667eea;text-decoration:underline">giscus.app</a>，选择你的仓库，会自动生成 Repo ID 和 Category ID<br />
+          4. 将以上四个字段填好后点击保存即可
+        </div>
+      </div>
     </div>
 
     <script>
-      // ===== 草稿管理 =====
+      // ===== 工具函数 =====
+      function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast')
+        t.textContent = msg
+        t.className = `toast ${type} show`
+        setTimeout(() => t.classList.remove('show'), 3000)
+      }
+
+      function toSlug(title) {
+        return title
+          .toLowerCase()
+          .replace(/['']/g, '')
+          .replace(/[^\w\u4e00-\u9fff]+/g, '-')
+          .replace(/^-+|-+$/g, '') || 'untitled'
+      }
+
+      function utf8ToBase64(str) {
+        return btoa(unescape(encodeURIComponent(str)))
+      }
+
+      function buildMarkdown() {
+        const title = document.getElementById('title').value.trim()
+        const tags = document.getElementById('tags').value.trim()
+        const image = document.getElementById('image').value.trim()
+        const content = document.getElementById('content').value
+        const date = new Date().toISOString().slice(0, 10)
+        const tagArr = tags ? tags.split(/\s*,\s*/).map(t => t.trim()).filter(Boolean) : []
+        let fm = `---\ntitle: '${title}'\ndescription: ''\npubDate: ${date}\ntags: [${tagArr.map(t => `'${t}'`).join(', ')}]\n`
+        if (image) fm += `image: '${image}'\n`
+        fm += `---\n\n${content}`
+        return fm
+      }
+
+      // ===== 本地草稿管理 =====
       function saveDraft() {
         const title = document.getElementById('title').value.trim()
-        if (!title) { alert('请输入标题'); return }
-        const draft = {
-          title,
-          tags: document.getElementById('tags').value.trim(),
-          image: document.getElementById('image').value.trim(),
-          content: document.getElementById('content').value,
-          savedAt: new Date().toLocaleString('zh-CN'),
-        }
+        if (!title) { showToast('请输入标题', 'error'); return }
+        const draft = { title, tags: document.getElementById('tags').value.trim(), image: document.getElementById('image').value.trim(), content: document.getElementById('content').value, savedAt: new Date().toLocaleString('zh-CN') }
         const drafts = JSON.parse(localStorage.getItem('blog_drafts') || '{}')
         drafts[title] = draft
         localStorage.setItem('blog_drafts', JSON.stringify(drafts))
         loadDraftList()
-        alert('草稿已保存')
+        showToast('草稿已保存')
       }
 
       function loadDraftList() {
@@ -133,13 +242,13 @@
         if (keys.length === 0) { el.innerHTML = '<p class="text-xs" style="color:#94a3b8">暂无草稿</p>'; return }
         el.innerHTML = keys.map(k => `
           <div class="draft-item">
-            <div>
-              <strong style="font-size:0.9rem">${drafts[k].title}</strong>
-              <span class="text-xs" style="display:block;color:#94a3b8">${drafts[k].savedAt}</span>
+            <div style="min-width:0;flex:1">
+              <strong style="font-size:0.9rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${drafts[k].title}</strong>
+              <span class="text-xs" style="color:#94a3b8">${drafts[k].savedAt}</span>
             </div>
-            <div class="flex">
-              <button class="btn btn-outline btn-sm" onclick='loadDraft("${k}")'>加载</button>
-              <button class="btn btn-outline btn-sm" onclick='deleteDraft("${k}")'>删除</button>
+            <div class="flex" style="flex-shrink:0">
+              <button class="btn btn-outline btn-sm" onclick='loadDraft("${k.replace(/\\/g, '\\\\').replace(/"/g, '&quot;')}")'>加载</button>
+              <button class="btn btn-outline btn-sm" onclick='deleteDraft("${k.replace(/\\/g, '\\\\').replace(/"/g, '&quot;')}")'>删除</button>
             </div>
           </div>
         `).join('')
@@ -147,8 +256,7 @@
 
       function loadDraft(title) {
         const drafts = JSON.parse(localStorage.getItem('blog_drafts') || '{}')
-        const d = drafts[title]
-        if (!d) return
+        const d = drafts[title]; if (!d) return
         document.getElementById('title').value = d.title
         document.getElementById('tags').value = d.tags
         document.getElementById('image').value = d.image
@@ -158,50 +266,170 @@
 
       function deleteDraft(title) {
         const drafts = JSON.parse(localStorage.getItem('blog_drafts') || '{}')
-        delete drafts[title]
-        localStorage.setItem('blog_drafts', JSON.stringify(drafts))
+        delete drafts[title]; localStorage.setItem('blog_drafts', JSON.stringify(drafts))
         loadDraftList()
       }
 
       function clearForm() {
-        document.getElementById('title').value = ''
-        document.getElementById('tags').value = ''
-        document.getElementById('image').value = ''
-        document.getElementById('content').value = ''
+        ;['title','tags','image','content'].forEach(id => document.getElementById(id).value = '')
         document.getElementById('preview').textContent = '已清空'
       }
 
-      // ===== 导出 .md 文件 =====
+      // ===== 导出 .md =====
       function exportMd() {
         const title = document.getElementById('title').value.trim()
-        const tags = document.getElementById('tags').value.trim()
-        const image = document.getElementById('image').value.trim()
-        const content = document.getElementById('content').value
-        if (!title) { alert('请输入标题'); return }
-
-        const date = new Date().toISOString().slice(0, 10)
-        const tagArr = tags ? tags.split(/\s*,\s*/).map(t => `'${t}'`).join(', ') : ''
-        let frontmatter = `---\ntitle: '${title}'\ndescription: ''\npubDate: ${date}\ntags: [${tagArr}]\n`
-        if (image) frontmatter += `image: '${image}'\n`
-        frontmatter += `---\n\n${content}`
-
-        const blob = new Blob([frontmatter], { type: 'text/markdown' })
+        if (!title) { showToast('请输入标题', 'error'); return }
+        const md = buildMarkdown()
+        const blob = new Blob([md], { type: 'text/markdown' })
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
-        a.download = `${title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-')}.md`
-        a.click()
-        URL.revokeObjectURL(a.href)
+        a.download = `${toSlug(title)}.md`
+        a.click(); URL.revokeObjectURL(a.href)
+        showToast('文件已导出')
+      }
+
+      // ===== GitHub 发布 =====
+      function saveGitHubConfig() {
+        const cfg = {
+          token: document.getElementById('githubToken').value.trim(),
+          owner: document.getElementById('githubOwner').value.trim(),
+          repo: document.getElementById('githubRepo').value.trim(),
+        }
+        localStorage.setItem('github_config', JSON.stringify(cfg))
+        showToast('GitHub 配置已保存')
+        updateGitHubStatus()
+      }
+
+      function loadGitHubConfig() {
+        try {
+          const cfg = JSON.parse(localStorage.getItem('github_config') || '{}')
+          if (cfg.token) document.getElementById('githubToken').value = cfg.token
+          if (cfg.owner) document.getElementById('githubOwner').value = cfg.owner
+          if (cfg.repo) document.getElementById('githubRepo').value = cfg.repo
+        } catch(e) {}
+        updateGitHubStatus()
+      }
+
+      function updateGitHubStatus() {
+        const cfg = JSON.parse(localStorage.getItem('github_config') || '{}')
+        const el = document.getElementById('githubStatus')
+        const statusBadge = document.getElementById('publishStatus')
+        if (cfg.token && cfg.owner && cfg.repo) {
+          el.textContent = `✅ 已配置: ${cfg.owner}/${cfg.repo}`
+          el.style.color = '#059669'
+          statusBadge.style.display = 'inline'
+        } else {
+          el.textContent = '⚠️ 请填写完整的 GitHub 配置信息'
+          el.style.color = '#d97706'
+          statusBadge.style.display = 'none'
+        }
+      }
+
+      async function testGitHubConnection() {
+        const cfg = JSON.parse(localStorage.getItem('github_config') || '{}')
+        if (!cfg.token || !cfg.owner || !cfg.repo) { showToast('请先保存 GitHub 配置', 'error'); return }
+        try {
+          const r = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}`, {
+            headers: { 'Authorization': `token ${cfg.token}` }
+          })
+          if (r.ok) { showToast('✅ GitHub 连接成功'); updateGitHubStatus() }
+          else { showToast(`❌ 连接失败 (${r.status})`, 'error') }
+        } catch(e) {
+          showToast(`❌ 网络错误: ${e.message}`, 'error')
+        }
+      }
+
+      async function publishToGitHub() {
+        const title = document.getElementById('title').value.trim()
+        if (!title) { showToast('请输入文章标题', 'error'); return }
+
+        const cfg = JSON.parse(localStorage.getItem('github_config') || '{}')
+        if (!cfg.token || !cfg.owner || !cfg.repo) {
+          showToast('请先在 GitHub 配置区填写并保存信息', 'error')
+          return
+        }
+
+        const slug = toSlug(title)
+        const md = buildMarkdown()
+        const encoded = utf8ToBase64(md)
+        const path = `src/content/blog/${slug}.md`
+        const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`
+
+        const btn = event.target
+        const origText = btn.innerHTML
+        btn.innerHTML = '⏳ 发布中…'
+        btn.disabled = true
+
+        try {
+          // 检查文件是否已存在（需要先获取 SHA）
+          let sha = null
+          const checkRes = await fetch(url, {
+            headers: { 'Authorization': `token ${cfg.token}` }
+          })
+          if (checkRes.ok) {
+            const existing = await checkRes.json()
+            sha = existing.sha
+          }
+
+          // 创建或更新文件
+          const res = await fetch(url, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `token ${cfg.token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: sha ? `更新文章: ${title}` : `新文章: ${title}`,
+              content: encoded,
+              sha: sha || undefined,
+            })
+          })
+
+          if (res.ok) {
+            showToast(`✅ 文章已${sha ? '更新' : '发布'}！Cloudflare Pages 将自动部署`)
+            const draftKey = title
+            deleteDraft(draftKey)
+          } else {
+            const err = await res.json()
+            showToast(`❌ 发布失败: ${err.message}`, 'error')
+          }
+        } catch(e) {
+          showToast(`❌ 网络错误: ${e.message}`, 'error')
+        } finally {
+          btn.innerHTML = origText
+          btn.disabled = false
+        }
+      }
+
+      // ===== Giscus 配置 =====
+      function saveGiscusConfig() {
+        const cfg = {
+          repo: document.getElementById('giscusRepo').value.trim(),
+          repoId: document.getElementById('giscusRepoId').value.trim(),
+          category: document.getElementById('giscusCategory').value.trim(),
+          categoryId: document.getElementById('giscusCategoryId').value.trim(),
+        }
+        localStorage.setItem('giscus_config', JSON.stringify(cfg))
+        showToast('评论配置已保存')
+      }
+
+      function loadGiscusConfig() {
+        try {
+          const cfg = JSON.parse(localStorage.getItem('giscus_config') || '{}')
+          if (cfg.repo) document.getElementById('giscusRepo').value = cfg.repo
+          if (cfg.repoId) document.getElementById('giscusRepoId').value = cfg.repoId
+          if (cfg.category) document.getElementById('giscusCategory').value = cfg.category
+          if (cfg.categoryId) document.getElementById('giscusCategoryId').value = cfg.categoryId
+        } catch(e) {}
       }
 
       // ===== 图片上传预览 =====
       function handleImage(e) {
-        const file = e.target.files[0]
-        if (!file) return
+        const file = e.target.files[0]; if (!file) return
         const reader = new FileReader()
         reader.onload = (ev) => {
           document.getElementById('previewImg').src = ev.target.result
           document.getElementById('imagePreview').style.display = 'flex'
-          // 存下文件名供复制路径用
           window._lastImageName = file.name
         }
         reader.readAsDataURL(file)
@@ -211,21 +439,22 @@
         const name = window._lastImageName || 'image'
         const path = `/images/${name}`
         navigator.clipboard.writeText(path).then(() => {
-          alert(`路径已复制: ${path}\n请将图片保存到 public/images/ 目录`)
-        }).catch(() => {
-          prompt('手动复制路径:', path)
-        })
+          showToast(`路径已复制: ${path}`)
+        }).catch(() => { prompt('手动复制路径:', path) })
       }
 
-      // ===== 实时预览（手动触发） =====
+      // ===== 实时预览 =====
       function updatePreview() {
         const content = document.getElementById('content').value || '（空）'
         document.getElementById('preview').textContent = content
+        document.getElementById('wordCount').textContent = `${content.length} 字`
       }
       document.getElementById('content').addEventListener('input', updatePreview)
 
-      // 初始化加载草稿列表
+      // ===== 初始化 =====
       loadDraftList()
+      loadGitHubConfig()
+      loadGiscusConfig()
     </script>
   </body>
 </html>

@@ -1,0 +1,50 @@
+---
+// 留言板：基于 Giscus（GitHub Discussions）的评论页面
+import BaseLayout from '../layouts/BaseLayout.astro'
+---
+
+<BaseLayout title="留言板 — My Blog" description="欢迎留言交流">
+  <div class="h-1 w-16 gradient-bg rounded-full mx-auto mb-8"></div>
+  <h1 class="text-2xl sm:text-3xl font-bold text-center mb-2">💬 留言板</h1>
+  <p class="text-gray-500 text-center mb-10 text-sm">欢迎留下你的想法和建议</p>
+
+  <div class="glass p-6 sm:p-8 max-w-2xl mx-auto">
+    <!-- Giscus 评论容器 -->
+    <div id="comments">
+      <p class="text-sm text-gray-400 text-center py-8">
+        请在管理面板中配置 Giscus 评论系统以启用留言功能
+      </p>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  // 从 localStorage 读取 Giscus 配置并初始化
+  try {
+    const config = JSON.parse(localStorage.getItem('giscus_config') || '{}')
+    if (config.repo && config.repoId && config.category && config.categoryId) {
+      const container = document.getElementById('comments')
+      if (container) {
+        container.innerHTML = ''
+        const script = document.createElement('script')
+        script.src = 'https://giscus.app/client.js'
+        script.setAttribute('data-repo', config.repo)
+        script.setAttribute('data-repo-id', config.repoId)
+        script.setAttribute('data-category', config.category)
+        script.setAttribute('data-category-id', config.categoryId)
+        script.setAttribute('data-mapping', 'pathname')
+        script.setAttribute('data-strict', '0')
+        script.setAttribute('data-reactions-enabled', '1')
+        script.setAttribute('data-emit-metadata', '0')
+        script.setAttribute('data-input-position', 'bottom')
+        script.setAttribute('data-theme', 'light')
+        script.setAttribute('data-lang', 'zh-CN')
+        script.setAttribute('crossorigin', 'anonymous')
+        script.async = true
+        container.appendChild(script)
+      }
+    }
+  } catch (e) {
+    console.warn('Giscus 未配置:', e.message)
+  }
+</script>
